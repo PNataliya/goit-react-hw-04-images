@@ -1,29 +1,25 @@
-import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { GalleryItem, GalleryItemImage } from './ImageGalleryItem.styled';
-import Modal from '../Modal/Modal';
 
-export default function ImageGalleryItem({ image }) {
-  const [modal, setModal] = useState(false);
-  const { webformatURL, largeImageURL, tags } = image;
+export default function ImageGalleryItem({
+  webformatUrl,
+  alt,
+  largeImageURL,
+  onSelect,
+}) {
   return (
-    <GalleryItem>
+    <GalleryItem onClick={() => onSelect(largeImageURL)}>
       <GalleryItemImage
-        src={webformatURL}
-        alt={tags}
-        onClick={() => setModal(true)}
+        src={webformatUrl}
+        alt={alt}
+        data-source={largeImageURL}
       />
-      {modal && (
-        <Modal
-          imageUrl={largeImageURL}
-          imageTags={tags}
-          onClose={() => setModal(false)}
-        />
-      )}
     </GalleryItem>
   );
 }
-
 ImageGalleryItem.propTypes = {
-  image: PropTypes.object.isRequired,
+  webformatUrl: PropTypes.string.isRequired,
+  alt: PropTypes.string.isRequired,
+  largeImageURL: PropTypes.string.isRequired,
+  onSelect: PropTypes.func.isRequired,
 };

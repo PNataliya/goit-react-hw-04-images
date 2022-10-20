@@ -1,102 +1,83 @@
 import { useState, useEffect } from 'react';
 import SearchBar from './SearchBar/SearchBar';
 import ImageGallery from './ImageGallery/ImageGallery';
-import fetchImages from 'api/fetch';
+import { addImages } from 'api/fetch';
 import Button from './Button/Button';
 import Loader from './Loader/Loader';
+import Modal from './Modal/';
 import { AppCard } from './App.styled';
 import Notiflix from 'notiflix';
 
 export const App = () => {
-  const [searchInput, setSearchInput] = useState('');
+  const [images, setImages] = useState([]);
   const [page, setPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const [images, setImages] = useState(null);
-  const [totalHits, setTotalHits] = useState(0);
-  // const [showModal, setShowModal] = useState(false);
-  // const [currentLargeImageUrl, setCurrentLargeImageUrl] = useState('');
-  // const [currentImageTags, setCurrentImageTags] = useState('');
+  const [imageName, setImageName] = useState('');
+  const [isLoadingImage, setIsLoadingImage] = useState(false);
+  const [showModal, setshowModal] = useState(false);
+  const [largeImageURL, setlargeImageURL] = useState('');
+  const [totalImages, setTotalImages] = useState('');
+  const [error, setError] = useState(false);
+
+  const handleFormSubmit = imageName => {
+    setImages([]);
+    setPage(1);
+    setImageName(imageName);
+    setlargeImageURL('');
+    setError(false);
+  };
 
   useEffect(() => {
-    if (searchInput !== '') {
-      setIsLoading(true);
+    async function fatchImages() {
+      if (imageName === '') {
+        return;
+      }
+      try {
+        const images = await addImages(imageName, page);
+        if (images.hits.length === 0) {
+          return Notiflix.Notify.warning(`${error.message}`);
+        }
+        setIsLoadingImage(true);
+        setImages(state => [...state, ...images.hits]);
 
-      fetchImages(searchInput, page)
-        .then(({ hits, totalHits }) => {
-          if (hits.length === 0) {
-            setImages(null);
-            setTotalHits(0);
-            return Promise.reject(
-              new Error(`There is no image with name ${searchInput}`)
-            );
-          }
-
-          const arrayOfImages = createArrayOfImages(hits);
-
-          setTotalHits(totalHits);
-
-          return arrayOfImages;
-        })
-        .then(arrayOfImages => {
-          if (page === 1) {
-            setImages(arrayOfImages);
-            window.scrollTo({
-              top: 0,
-            });
-            return;
-          }
-          setImages(prevImages => [...prevImages, ...arrayOfImages]);
-        })
-
-        .catch(error => {
-          Notiflix.Notify.warning(`${error.message}`);
-        })
-
-        .finally(() => turnOffLoader());
+        setIsLoadingImage(false);
+        setTotalImages(images.totalHits);
+      } catch (error) {
+        setError(true);
+        console.log(error);
+      }
     }
-  }, [page, searchInput]);
 
-  const createArrayOfImages = data => {
-    const arrayOfImages = data.map(element => ({
-      tags: element.tags,
-      webformatURL: element.webformatURL,
-      largeImageURL: element.largeImageURL,
-    }));
-    return arrayOfImages;
+    fatchImages();
+  }, [imageName, page, error.message]);
+
+  const handleAddPage = page => {
+    setPage(page);
   };
 
-  const turnOffLoader = () => setIsLoading(false);
-
-  const formSubmitHandler = data => {
-    setSearchInput(data);
-    setPage(1);
+  const handleSelectImg = img => {
+    setlargeImageURL(img);
   };
 
-  const nextFetch = () => {
-    setPage(prevPage => prevPage + 1);
+  const toggleModal = () => {
+    setshowModal(showModal => !showModal);
   };
-  // const openModal = event => {
-  //   setCurrentLargeImageUrl(event.target.dataset.large);
-  //   setCurrentImageTags(event.target.alt);
 
-  //   setShowModal({ currentLargeImageUrl, currentImageTags });
-  //   toggleModal();
-  // };
-
-  // const toggleModal = () => {
-  //   setShowModal(({ showModal }) => ({
-  //     showModal: !showModal,
-  //   }));
-  // };
+  let lengthGalleryImg = images.length;
 
   return (
     <AppCard>
-      <SearchBar onSubmit={formSubmitHandler} />
-      {images && <ImageGallery images={images} />}
-      {isLoading && <Loader />}
-      {images && images.length >= 12 && images.length < totalHits && (
-        <Button onClick={nextFetch} />
+      <SearchBar onSubmit={handleFormSubmit} />
+      <ImageGallery
+        images={images}
+        onSelect={handleSelectImg}
+        onModalClick={toggleModal}
+      />
+      {images.length > 0 && lengthGalleryImg !== totalImages && (
+        <Button onClick={handleAddPage} />
       )}
+
+      {isLoadingImage && <Loader />}
+      {showModal && <Modal onClose={toggleModal} imageURL={largeImageURL} />}
     </AppCard>
   );
 };
